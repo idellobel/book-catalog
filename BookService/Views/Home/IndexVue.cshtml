@@ -1,0 +1,241 @@
+﻿
+@{
+    ViewBag.Title = "Books with Vue.js";
+}
+
+@section scripts{
+    <script src="~/Scripts/bootstrap-confirmation.min.js"></script>
+    <script src="~/Scripts/vue.js"></script>
+    @*<script src="https://cdn.jsdelivr.net/npm/vue"></script>*@
+    <script>
+
+        $(function () {
+        //    // JQuery
+        //    //console.log('ready');
+        })
+
+        var apiURL = '/api/'
+
+        var app = new Vue({
+            el: '#app',
+            data: {
+                message: 'Loading books...',
+                books: null,
+                currentBook: null,
+                authors: null,
+                editMode: false,
+                isEdit: false
+            },
+            created: function () {  //property van de view
+                var self = this;
+                this.fetchBooks();
+                this.fetchAuthors();
+            },
+
+
+            methods: {
+                fetchBooks: function () {
+                    self = this;
+
+                    // fetch: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+                    // backticks: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals
+                    fetch(`${apiURL}Books`)
+                        .then(res => res.json())
+                        .then(function (books) {
+                            books.forEach(function (book, i) {
+                                book.isActive = false;
+                            });
+                            self.books = books;
+                            self.message = 'Overview'
+                            if (self.books.length > 0) {
+                                self.fetchBookDetails(self.books[0]);
+                            }
+                        })
+                        .catch(err => console.error('Fout: ' + err));
+                },
+                fetchBookDetails: function (book) {
+                    self = this;
+                    fetch(`${apiURL}Books/${book.Id}`)
+                        .then(res => res.json())
+                        .then(function (res) {
+                            self.currentBook = res;
+                            self.books.forEach(function (book, i) {
+                                book.isActive = false;
+                            })
+                            book.isActive = true;
+                        })
+                        .catch(err => console.error('Fout:' + err));
+                },
+
+                getBookClass: function (book) {
+                    if (book.isActive) return 'list-group-item active';
+                    return 'list-group-item';
+                },
+                fetchAuthors: function () {
+                    var self = this
+                    fetch(`${apiURL}Authors`)
+                        .then(res => res.json())
+                        .then(function (res) {
+                            self.authors = res;
+                        })
+                        .catch(err => console.error('Fout:' + err));
+
+                },
+                //changeAuthor: function () {
+                //    self = this;
+                //},
+                toEditMode: function (isEdit) {
+                    self = this;
+                    this.editMode = true;
+                    this.isEdit = isEdit;
+                    if (!isEdit) {
+                        self.currentBook = { Id: 0, Title: '', AuthorId: 0, Genre: '', Price: 0 }
+                    }
+                },
+                annuleer: function () {
+                    self = this;
+                    self.editMode = false;
+                    this.fetchBooks();
+                },
+                save: function () {
+                    var self = this
+
+                     //opslaan - ajax configuratie
+                    var ajaxHeaders = new Headers();
+                    ajaxHeaders.append("Content-Type", "application/json");
+                    var ajaxConfig = {
+                        method: 'PUT',
+                        body: JSON.stringify(self.currentBook),
+                        headers: ajaxHeaders
+                    }
+                     //opslaan: edit of toevoegen
+                    if (self.isEdit) {
+                        var myRequest = new
+                            Request(`${apiURL}Books/${self.currentBook.Id}`, ajaxConfig)
+
+                    }
+                    else {
+                        ajaxConfig.method = 'POST';
+                        var myRequest = new Request(`${apiURL}Books/`, ajaxConfig)
+                    }
+                    fetch(myRequest)
+                        .then(res => res.json())
+                        .then(function (res) {
+
+                             //GUI Aanpassen - wat extra taakjes doordat in lijst BookDTO's staan en in detailweergave BookDetailDTO getoond wordt
+                             //nieuwe auteursnaam ophalen
+                            theAuthor = self.authors.filter(author => (author.Id === self.currentBook.AuthorId))[0];
+                            self.currentBook.AuthorName = theAuthor.Name;
+                            if (self.isEdit) {
+                                //het geupdate boek uit de boekenlijst ophalen
+                                theBook = self.books.filter(book => (book.Id === self.currentBook.Id))[0];
+                                 //gegevens aanpassen
+                                theBook.Titel = self.currentBook.Title;
+                                theBook.AuthorName = theAuthor.Name;
+                                
+                            } else {
+                                 //boek toevoegen aan de lijst - we voegen eigenlijk een boekdetailDTO toe ipv bookDTO
+                                console.log(res)
+                                self.currentBook.Id = res.Id;
+                                self.books.push(self.currentBook)
+                                self.fetchBookDetails(self.books[self.books.length - 1]);
+                            }
+                            self.editMode = false;
+                        })
+                        .catch(err => console.error('Fout: ' + err));
+                },
+                deleteBook: function () {
+                    self = this;
+                    fetch(`${apiURL}/Books/${self.currentBook.Id}`, { method: 'DELETE' })
+                        .then(res => res.json())
+                        .then(function (res) {
+                            self.books.forEach(function (book, i) {
+                                if (book.Id == self.currentBook.Id) {
+                                    self.books.splice(i, 1);
+                                    return;
+                                }
+                            });
+                             //eerste Boek selecteren
+                            if (self.books.length > 0)
+                                self.fetchBookDetails(self.books[0]);
+                        })
+                        .catch(err => console.error('Fout:' + err));
+
+                },
+            }
+        });
+                   
+
+
+    </script>
+}
+
+<h2>@ViewBag.Title</h2>
+
+<article id="app" class="row">
+    <header class="col-md-4">
+        <h3>{{ message }}</h3>
+        <nav>
+            <ul class="list-group">
+                <li v-for="book in books" v-on:click="fetchBookDetails(book)" :class="getBookClass(book)" style="cursor:pointer">
+                    <span class="bookTitle">{{ book.Title }}</span>
+                    <span class="bookAuthorName">{{ book.AuthorName }}</span>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <article v-if="currentBook" class="col-md-4">
+        <h3>Details</h3>
+        <div v-if="editMode" class="form-group">
+            <table>
+                <tr>
+                    <td>Title:</td>
+                    <td><input v-model="currentBook.Title" class="form-control"></td>
+                </tr>
+                <tr>
+                    <td>Author:</td>
+                    <td>
+                        <select v-model="currentBook.AuthorId" v-on:change="changeAuthor" class="form-control">
+                            <option v-for="author in authors" v-bind:value="author.Id">{{ author.Name }}</option>
+                        </select>
+                        @*<span>Selected: {{ currentBook.AuthorId }}</span>*@
+                    </td>
+                </tr>
+                <tr>
+                    <td>Genre:</td>
+                    <td><input v-model="currentBook.Genre" class="form-control"></td>
+                </tr>
+                <tr>
+                    <td>Price:</td>
+                    <td><input v-model="currentBook.Price" class="form-control"></td>
+                </tr>
+            </table>
+            <button v-on:click="save" class="btn btn-primary">Save</button>
+            <button v-on:click="annuleer" class="btn btn-success">Annuleer</button>
+        </div>
+        <div v-else>
+            <table cellpadding="8em">
+                <tr>
+                    <td>Title:</td>
+                    <td class="bookTitle">{{ currentBook.Title}}</td>
+                </tr>
+                <tr>
+                    <td>Author:</td>
+                    <td class="bookAuthorName">{{ currentBook.AuthorName}}</td>
+                </tr>
+                <tr>
+                    <td>Genre:</td>
+                    <td>{{ currentBook.Genre}}</td>
+                </tr>
+                <tr>
+                    <td>Price:</td>
+                    <td>{{ currentBook.Price}}</td>
+                </tr>
+            </table>
+            <button v-on:click="toEditMode(true)" class="btn btn-primary">Edit</button>
+            <button v-on:click="toEditMode(false)" class="btn btn-warning">New</button>
+            <button v-on:click="deleteBook()" class="btn btn-danger" data-toggle="confirmation">Delete</button>
+        </div>
+    </article>
+</article>

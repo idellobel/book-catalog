@@ -16,11 +16,15 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                @Html.ActionLink("Application name", "Index", "Home", new { area = "" }, new { @class = "navbar-brand" })
+                @Html.ActionLink("BooksService Application", "Index", "Home", new { area = "" }, new { @class = "navbar-brand" })
             </div>
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
                     <li>@Html.ActionLink("Home", "Index", "Home", new { area = "" }, null)</li>
+                    <li>@Html.ActionLink("Vue.js", "IndexVue", "Home", new { area = "" }, null)</li>
+                    <li>@Html.ActionLink("BookPages", "IndexVuePages", "Home", new { area = "" }, null)</li>
+                    <li>@Html.ActionLink("AuthorList", "IndexVueAuthorList", "Home", new { area = "" }, null)</li>
+                    <li>@Html.ActionLink("BooksAuthor", "IndexVueBooksPerAuthorList", "Home", new { area = "" }, null)</li>
                     <li>@Html.ActionLink("API", "Index", "Help", new { area = "" }, null)</li>
                 </ul>
             </div>
@@ -30,12 +34,13 @@
         @RenderBody()
         <hr />
         <footer>
-            <p>&copy; @DateTime.Now.Year - My ASP.NET Application</p>
+            <p>&copy; @DateTime.Now.Year - HBO5 Informatica Howest / CVO IVO - Uitwerking Ivan Dellobel</p>
         </footer>
     </div>
 
     @Scripts.Render("~/bundles/jquery")
     @Scripts.Render("~/bundles/bootstrap")
+    
     @RenderSection("scripts", required: false)
 </body>
 </html>
